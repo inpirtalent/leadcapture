@@ -93,6 +93,13 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .field textarea {
   resize: vertical;
   min-height: 120px;
@@ -104,6 +111,22 @@
   border-color: #737373;
   box-shadow: 0 0 0 2px rgba(115, 115, 115, 0.15);
   background: #2a2a2a;
+}
+
+.inputError {
+  border-color: #ef4444 !important;
+}
+
+.inputError:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+}
+
+.fieldError {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
 }
 
 .actions {
@@ -124,7 +147,7 @@
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
 
-.actions button:hover {
+.actions button:hover:not(:disabled) {
   background: #d4d4d4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transform: translateY(-1px);
@@ -152,12 +175,6 @@
   border: 1px solid transparent;
   font-weight: 600;
   font-size: 14px;
-}
-
-.success {
-  background: #252525;
-  border-color: #404040;
-  color: #e5e5e5;
 }
 
 .error {
@@ -201,3 +218,4 @@
     font-size: 26px;
   }
 }
+
