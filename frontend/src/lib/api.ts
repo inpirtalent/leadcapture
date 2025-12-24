@@ -24,14 +24,26 @@ export interface ApiError {
   field?: string;
 }
 
+export interface ProgressUpdate {
+  progress: number;
+  message: string;
+  error?: boolean;
+  data?: any;
+}
+
 /**
- * Submit lead form data to the API
+ * Submit lead form data to the API with progress tracking
  * @param formData - Lead form data
+ * @param onProgress - Callback function for progress updates
  * @returns Promise with API response
  * @throws ApiError if request fails
  */
-export async function submitLead(formData: LeadFormData): Promise<ApiResponse> {
+export async function submitLead(
+  formData: LeadFormData,
+  onProgress?: (update: ProgressUpdate) => void
+): Promise<ApiResponse> {
   try {
+    // Submit lead and get session ID
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.LEAD}`, {
       method: "POST",
       headers: {
@@ -51,6 +63,18 @@ export async function submitLead(formData: LeadFormData): Promise<ApiResponse> {
       } as ApiError;
     }
 
+    // If we have a session ID and progress callback, listen for progress updates
+    if (data.sessionId && onProgress) {
+      await listenToProgress(data.sessionId, onProgress);
+      
+      // Return the final data from progress
+      return {
+        status: "success",
+        message: "Lead captured successfully",
+        data: data.data || { leadId: data.sessionId },
+      } as ApiResponse;
+    }
+
     return data as ApiResponse;
   } catch (error) {
     if (error && typeof error === "object" && "message" in error) {
@@ -61,5 +85,51 @@ export async function submitLead(formData: LeadFormData): Promise<ApiResponse> {
       code: "NETWORK_ERROR",
     } as ApiError;
   }
+}
+
+/**
+ * Listen to progress updates via Server-Sent Events
+ * @param sessionId - Session ID from initial submission
+ * @param onProgress - Callback function for progress updates
+ */
+async function listenToProgress(
+  sessionId: string,
+  onProgress: (update: ProgressUpdate) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const eventSource = new EventSource(
+      `${API_BASE_URL}${API_ENDPOINTS.LEAD}/progress/${sessionId}`
+    );
+
+    eventSource.onmessage = (event) => {
+      try {
+        const update: ProgressUpdate = JSON.parse(event.data);
+        onProgress(update);
+
+        // If complete or error, close connection
+        if (update.progress === 100 || update.error) {
+          eventSource.close();
+          if (update.error) {
+            reject(new Error(update.message));
+          } else {
+            resolve();
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing progress update:", error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      eventSource.close();
+      reject(new Error("Connection to progress stream failed"));
+    };
+
+    // Timeout after 60 seconds
+    setTimeout(() => {
+      eventSource.close();
+      reject(new Error("Progress stream timeout"));
+    }, 60000);
+  });
 }
 

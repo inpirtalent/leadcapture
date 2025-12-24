@@ -29,6 +29,8 @@ export default function LeadForm({ initialData }: LeadFormProps) {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+  const [progressStep, setProgressStep] = useState<string>("");
+  const [progressPercent, setProgressPercent] = useState<number>(0);
 
   const isSubmitDisabled = useMemo(
     () =>
@@ -124,9 +126,22 @@ export default function LeadForm({ initialData }: LeadFormProps) {
 
     setSubmissionState("loading");
     setErrorMessage("");
+    setProgressStep("Submitting your lead...");
 
     try {
-      const response = await submitLead(formData);
+      const response = await submitLead(formData, (update) => {
+        // Update progress based on backend updates
+        setProgressStep(update.message);
+        setProgressPercent(update.progress);
+        
+        // If there's an error from progress updates
+        if (update.error) {
+          setSubmissionState("error");
+          setErrorMessage(update.message);
+          setProgressStep("");
+          setProgressPercent(0);
+        }
+      });
       
       // Redirect to success page
       router.push("/success");
@@ -144,11 +159,27 @@ export default function LeadForm({ initialData }: LeadFormProps) {
         setErrorMessage(error?.message || "Something went wrong. Please try again.");
       }
       console.error("Lead submission error:", error);
+      setProgressStep("");
     }
   };
 
   return (
     <div className={styles.page}>
+      {submissionState === "loading" && (
+        <div className={styles.loadingOverlay}>
+          <div className={styles.loadingContent}>
+            <div className={styles.spinner}></div>
+            <p className={styles.progressText}>{progressStep}</p>
+            <div className={styles.progressBar}>
+              <div 
+                className={styles.progressFill}
+                style={{ width: `${progressPercent}%` }}
+              ></div>
+              <span className={styles.progressPercentage}>{progressPercent}%</span>
+            </div>
+          </div>
+        </div>
+      )}
       <main className={styles.shell}>
         <div className={styles.header}>
           <span className={styles.badge}>Lead capture</span>

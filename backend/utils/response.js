@@ -113,6 +113,21 @@ class ResponseHelper {
           messageObj = getMessage('EXTERNAL_SERVICE', 'AIRTABLE_ERROR');
         }
       }
+    } else if (service === 'OpenAI') {
+      // Handle OpenAI errors
+      if (error?.code === 'OPENAI_API_ERROR' || error?.code === 'OPENAI_PARSE_ERROR') {
+        messageObj = {
+          status: 'error',
+          message: error.message || 'OpenAI API error',
+          code: error.code || 'OPENAI_ERROR',
+        };
+      } else {
+        messageObj = {
+          status: 'error',
+          message: error?.message || 'OpenAI service error',
+          code: error?.code || 'OPENAI_ERROR',
+        };
+      }
     } else {
       messageObj = getMessage('EXTERNAL_SERVICE', 'SERVICE_UNAVAILABLE');
     }
